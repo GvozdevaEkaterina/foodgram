@@ -6,6 +6,7 @@ services:
     build: ../frontend
     volumes:
       - ../frontend/:/app/result_build/
+ 
   nginx:
     container_name: foodgram-proxy
     image: nginx:1.25.4-alpine
@@ -15,3 +16,9 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
+      - ../backend/media:/app/media
+      - ../backend/static_backend:/app/static_backend
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+

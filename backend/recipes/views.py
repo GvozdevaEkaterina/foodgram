@@ -1,0 +1,12 @@
+from django.shortcuts import render
+from rest_framework import viewsets
+
+from .models import Tag
+from .permissions import AdminOrReadOnly
+from .serializers import TagSerializer
+
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = (AdminOrReadOnly, )
+
