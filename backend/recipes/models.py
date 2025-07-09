@@ -66,9 +66,6 @@ class Recipe(models.Model):
         through='IngredientRecipe',
         related_name='recipes'
     )
-    is_favorited = models.BooleanField(
-        default=False
-    )
     is_in_shopping_cart = models.BooleanField(
         default=False
     )
@@ -120,3 +117,19 @@ class TagRecipe(models.Model):
 
     def __str__(self):
         return f'{self.tag} {self.recipe}'
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='favorites'
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='is_favorited'
+    )
+
+    class Meta:
+        unique_together = ('user', 'recipe', )

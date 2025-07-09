@@ -134,10 +134,15 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 6,
 }
 
+# CORS_ALLOWED_ORIGINS = [
+#     'http://localhost',
+#     'http://127.0.0.1',
+# ]
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost',
-    'http://127.0.0.1',
+    'http://localhost:80',
+    'http://host.docker.internal:80',
 ]
+
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
