@@ -1,12 +1,31 @@
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
 class MyUser(AbstractUser):
-    is_subscribed = models.BooleanField(default=False)
     avatar = models.ImageField(
         'Аватар',
         upload_to='avatars',
         null=True,
         default=None
     )
+
+
+User = get_user_model()
+
+
+class Subscriptions(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='following'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='followers'
+    )
+
+    class Meta:
+        unique_together = ('user', 'author', )

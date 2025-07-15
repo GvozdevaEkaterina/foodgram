@@ -1,18 +1,23 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 
-from .serializers import UserCreateSerializer, UserDetailSerializer
+from foodgram.serializers import UserDetailSerializer
+from .models import Subscriptions
+from .serializers import (
+    UserCreateSerializer,
+    SubscribeSerializer
+)
 
 
 User = get_user_model()
 
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserCreateSerializer
     permission_classes = (AllowAny, )
     pagination_class = PageNumberPagination 
 
@@ -64,3 +69,67 @@ class UserViewSet(viewsets.ModelViewSet):
             context={'request': request}
     )
         return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
+    def subscribe(self, request, pk=None):
+        following = self.get_object()
+        if request.method == 'POST':
+            if request.user == following:
+                return Response(
+                    {'error': 'Нельзя подписаться на себя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            object, created = Subscriptions.objects.get_or_create(
+                user=request.user,
+                author=following
+            )
+            if not created:
+                return Response(
+                    {'error': 'Вы уже подписаны на этого пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = SubscribeSerializer(
+                following,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            deleted, details = Subscriptions.objects.filter(
+                user=request.user,
+                author=following
+            ).delete()
+
+            if not deleted:
+                return Response(
+                    {'error': 'Вы не подписаны на этого пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        pagination_class=PageNumberPagination
+    )
+    def subscriptions(self, request):
+        subscribed_users = User.objects.filter(
+            followers__user=request.user
+        ).prefetch_related('recipes')
+
+        page = self.paginate_queryset(subscribed_users)
+        serializer = SubscribeSerializer(
+            subscribed_users,
+            many=True,
+            context={'request': request}
+        )
+        return (self.get_paginated_response(serializer.data)
+                if page is not None
+                else Response(serializer.data)
+        )

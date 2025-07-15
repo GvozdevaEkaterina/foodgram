@@ -59,15 +59,13 @@ class Recipe(models.Model):
     )
     author = models.ForeignKey(
         User,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='recipes'
     )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='IngredientRecipe',
         related_name='recipes'
-    )
-    is_in_shopping_cart = models.BooleanField(
-        default=False
     )
     name = models.CharField(
         max_length=MAX_RECIPE_NAME,
@@ -129,6 +127,22 @@ class Favorite(models.Model):
         Recipe,
         on_delete=models.CASCADE,
         related_name='is_favorited'
+    )
+
+    class Meta:
+        unique_together = ('user', 'recipe', )
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='shopping_cart'
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='is_in_shopping_cart'
     )
 
     class Meta:

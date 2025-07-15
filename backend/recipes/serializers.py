@@ -3,19 +3,8 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from .models import Ingredient, IngredientRecipe, Tag, Recipe
-from users.serializers import UserDetailSerializer
+from foodgram.serializers import Base64ImageField, UserDetailSerializer
 
-
-class Base64ImageField(serializers.ImageField):
-
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
-
-        return super().to_internal_value(data)
-    
 
 class TagSerializer(serializers.ModelSerializer):
 
@@ -74,7 +63,7 @@ class TagField(serializers.RelatedField):
 
 class RecipeSerializer(serializers.ModelSerializer):
 
-    author = UserDetailSerializer()
+    author = UserDetailSerializer(read_only=True)
 
     ingredients = IngredientField(
         source='ingredientrecipe_set',
@@ -92,6 +81,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         allow_null=False
     )
     is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -109,6 +99,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        validated_data['author'] = self.context['request'].user
         ingredients = validated_data.pop('ingredientrecipe_set', [])
         tags = validated_data.pop('tags', [])
         recipe = Recipe.objects.create(**validated_data)
@@ -147,14 +138,9 @@ class RecipeSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.is_favorited.filter(user=request.user).exists()
         return False
-
-
-class FavoriteRecipeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = (
-            'id',
-            'name',
-            'image',
-            'cooking_time'
-        )
+    
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.is_in_shopping_cart.filter(user=request.user).exists()
+        return False
