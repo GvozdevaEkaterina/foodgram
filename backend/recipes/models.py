@@ -2,15 +2,10 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from foodgram.constants import (
-    MAX_TAG_NAME,
-    MAX_TAG_SLUG_NAME,
-    MAX_INGREDIENT_NAME,
-    MAX_MEASUREMENT_UNIT,
-    MAX_RECIPE_NAME,
-    MIN_COOKING_TIME,
-    MIN_INGREDIENT_AMOUNT
-)
+from foodgram.constants import (MAX_INGREDIENT_NAME, MAX_MEASUREMENT_UNIT,
+                                MAX_RECIPE_NAME, MAX_TAG_NAME,
+                                MAX_TAG_SLUG_NAME, MIN_COOKING_TIME,
+                                MIN_INGREDIENT_AMOUNT)
 
 User = get_user_model()
 
@@ -20,14 +15,20 @@ class Tag(models.Model):
         max_length=MAX_TAG_NAME,
         unique=True,
         blank=False,
-        null=False
+        null=False,
+        verbose_name='Название'
     )
     slug = models.SlugField(
         max_length=MAX_TAG_SLUG_NAME,
         unique=True,
         blank=False,
-        null=False
+        null=False,
+        verbose_name='Слаг'
     )
+
+    class Meta:
+        verbose_name = 'тег'
+        verbose_name_plural = 'Теги'
 
     def __str__(self):
         return self.name
@@ -38,13 +39,19 @@ class Ingredient(models.Model):
         max_length=MAX_INGREDIENT_NAME,
         db_index=True,
         blank=False,
-        null=False
+        null=False,
+        verbose_name='Название'
     )
     measurement_unit = models.CharField(
         max_length=MAX_MEASUREMENT_UNIT,
         blank=False,
-        null=False
+        null=False,
+        verbose_name='Единицы измерения'
     )
+
+    class Meta:
+        verbose_name = 'ингредиент'
+        verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
         return self.name
@@ -55,33 +62,47 @@ class Recipe(models.Model):
         Tag,
         through='TagRecipe',
         related_name='recipes',
-        default=False
+        default=False,
+        verbose_name='Теги'
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='recipes'
+        related_name='recipes',
+        verbose_name='Автор'
     )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='IngredientRecipe',
-        related_name='recipes'
+        related_name='recipes',
+        verbose_name='Ингредиенты',
     )
     name = models.CharField(
         max_length=MAX_RECIPE_NAME,
         blank=False,
-        null=False
+        null=False,
+        verbose_name='Название'
     )
     image = models.ImageField(
-        'Фото готового блюда',
         upload_to='dish_picture',
         null=True,
-        default=None
+        default=None,
+        verbose_name='Изображение'
     )
-    text = models.TextField()
+    text = models.TextField(
+        verbose_name='Описание'
+    )
     cooking_time = models.IntegerField(
-        validators=(MinValueValidator(MIN_COOKING_TIME), )
+        validators=(MinValueValidator(MIN_COOKING_TIME), ),
+        verbose_name='Время приготовления'
     )
+
+    class Meta:
+        verbose_name = 'рецепт'
+        verbose_name_plural = 'Рецепты'
+
+    def __str__(self):
+        return self.name
 
 
 class IngredientRecipe(models.Model):

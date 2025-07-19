@@ -1,9 +1,12 @@
-import base64
-from django.core.files.base import ContentFile
+# import base64
+# from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from .models import Ingredient, IngredientRecipe, Tag, Recipe
-from foodgram.serializers import Base64ImageField, UserDetailSerializer
+from foodgram.constants import MIN_INGREDIENT_AMOUNT
+from users.fields import Base64ImageField
+from users.serializers import UserDetailSerializer
+
+from .models import Ingredient, IngredientRecipe, Recipe, Tag
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -24,7 +27,7 @@ class IngredientField(serializers.RelatedField):
 
     def get_queryset(self):
         return Ingredient.objects.all()
-    
+
     def to_representation(self, value):
         return {
             'id': value.ingredient.id,
@@ -53,12 +56,23 @@ class TagField(serializers.RelatedField):
             'name': value.name,
             'slug': value.slug
         }
-    
+
     def to_internal_value(self, data):
         try:
             return Tag.objects.get(id=data)
         except Tag.DoesNotExist:
             raise serializers.ValidationError(f'Тег с ID {data} не существует')
+
+
+class ShortRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'name',
+            'image',
+            'cooking_time'
+        )
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -130,9 +144,50 @@ class RecipeSerializer(serializers.ModelSerializer):
                     ingredient_id=ingredient['ingredient_id'],
                     amount=ingredient['amount']
                 )
-        
         return super().update(instance, validated_data)
+
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError('Это поле не может быть пустым')
+
+        ingredient_ids = [ingredient.get('ingredient_id') for ingredient in value]
+        if len(set(ingredient_ids)) < len(ingredient_ids):
+            raise serializers.ValidationError(
+                    'Ингредиенты не должны повторяться'
+                )
+        for ingredient in value:
+            if not Ingredient.objects.filter(id=ingredient['ingredient_id']).exists():
+                raise serializers.ValidationError(
+                    'Нельзя добавить несуществующий ингредиент'
+                )
+            if ingredient['amount'] < MIN_INGREDIENT_AMOUNT:
+                raise serializers.ValidationError(
+                    f'Нельзя добавить ингредиент в количестве меньше {MIN_INGREDIENT_AMOUNT}'
+                )
+        return value
+
+    def validate_tags(self, value):
+        if not value:
+            raise serializers.ValidationError('Это поле не может быть пустым')
+
+        tag_ids = [tag.id for tag in value]
+        if len(set(tag_ids)) < len(tag_ids):
+            raise serializers.ValidationError('Теги не должны повторяться')
+        return value
     
+    def validate(self, data):
+        print(data)
+        if self.context['request'].method in ['PATCH']:
+            if 'tags' not in data:
+                raise serializers.ValidationError(
+                    {'tags': 'Это поле обязательно при обновлении'},
+                )
+            if 'ingredientrecipe_set' not in data:
+                raise serializers.ValidationError(
+                    {'ingredients': 'Это поле обязательно при обновлении'},
+                )
+        return data
+
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:

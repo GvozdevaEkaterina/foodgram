@@ -1,5 +1,5 @@
-from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from short_url import decode_url, encode_url

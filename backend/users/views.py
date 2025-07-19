@@ -1,17 +1,13 @@
+from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
 
-from foodgram.serializers import UserDetailSerializer
 from .models import Subscriptions
-from .serializers import (
-    UserCreateSerializer,
-    SubscribeSerializer
-)
-
+from .serializers import (AvatarSerializer, CustomUserCreateSerializer,
+                          SubscribeSerializer, UserDetailSerializer)
 
 User = get_user_model()
 
@@ -19,11 +15,11 @@ User = get_user_model()
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     permission_classes = (AllowAny, )
-    pagination_class = PageNumberPagination 
+    pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return UserCreateSerializer
+        if self.action == 'create' or self.action == 'update':
+            return CustomUserCreateSerializer
         return UserDetailSerializer
 
     @action(detail=False, methods=['put', 'get', 'delete'], url_path='me/avatar')
@@ -46,8 +42,12 @@ class UserViewSet(viewsets.ModelViewSet):
             user.avatar = None
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
-
-        serializer = UserDetailSerializer(
+        if 'avatar' not in request.data:
+            return Response(
+                {'error': 'File "avatar" is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = AvatarSerializer(
             user,
             data={'avatar': request.data['avatar']},
             partial=True
@@ -116,7 +116,7 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['get'],
         permission_classes=[IsAuthenticated],
-        pagination_class=PageNumberPagination
+        pagination_class=LimitOffsetPagination
     )
     def subscriptions(self, request):
         subscribed_users = User.objects.filter(
@@ -125,7 +125,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         page = self.paginate_queryset(subscribed_users)
         serializer = SubscribeSerializer(
-            subscribed_users,
+            page,
             many=True,
             context={'request': request}
         )

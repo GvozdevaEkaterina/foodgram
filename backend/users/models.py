@@ -5,11 +5,14 @@ from django.db import models
 
 class MyUser(AbstractUser):
     avatar = models.ImageField(
-        'Аватар',
+        verbose_name='Аватар',
         upload_to='avatars',
         null=True,
         default=None
     )
+    class Meta:
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
 
 
 User = get_user_model()
