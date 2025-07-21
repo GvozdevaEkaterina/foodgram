@@ -1,5 +1,3 @@
-import base64
-
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
@@ -8,23 +6,23 @@ from rest_framework.validators import UniqueValidator
 from foodgram.constants import MAX_NAME_LENGTH
 from recipes.pagination import RecipesLimitPagination
 from users.fields import Base64ImageField
-
 from .models import Subscriptions
 
 User = get_user_model()
 
+
 def get_short_recipe_serializer():
+    """Импорт ShortRecipeSerializer, чтобы избежать цикличного импорта."""
     from recipes.serializers import ShortRecipeSerializer
     return ShortRecipeSerializer
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
-
+    """Кастомный сериалайзер создания пользователя."""
     email = serializers.EmailField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())]
     )
-
     first_name = serializers.CharField(
         required=True,
         max_length=MAX_NAME_LENGTH
@@ -45,10 +43,25 @@ class CustomUserCreateSerializer(UserCreateSerializer):
             'password'
         )
 
-
-class UserDetailSerializer(serializers.ModelSerializer):
-
+class BaseAvatarSerializer(serializers.ModelSerializer):
+    """Базовый сериалайзер для работы с аватарками."""
     avatar = Base64ImageField(required=False, allow_null=True)
+
+    class Meta:
+        abstract = True
+
+    def update(self, instance, validated_data):
+        avatar = validated_data.pop('avatar', None)
+        if avatar:
+            if instance.avatar:
+                instance.avatar.delete()
+            instance.avatar = avatar
+        instance.save()
+        return instance
+
+
+class UserDetailSerializer(BaseAvatarSerializer):
+    """Кастомный сериалайзер получения данных о пользователе."""
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
@@ -63,15 +76,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'avatar'
         )
 
-    def update(self, instance, validated_data):
-        avatar = validated_data.pop('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        instance.save()
-        return instance
-
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
@@ -80,27 +84,19 @@ class UserDetailSerializer(serializers.ModelSerializer):
                 author=obj
             ).exists()
         return False
-    
 
-class AvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField(required=False, allow_null=True)
+
+class AvatarSerializer(BaseAvatarSerializer):
+    """Сериалайзер для работы с аватарками."""
     class Meta:
         model = User
         fields = (
             'avatar',
         )
-    
-    def update(self, instance, validated_data):
-        avatar = validated_data.pop('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        instance.save()
-        return instance
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
+    """Сериалайзер для работы с подписками."""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
@@ -120,6 +116,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
         )
 
     def get_recipes(self, obj):
+        """Получение рецептов пользователя."""
         request = self.context.get('request')
         recipes = obj.recipes.all().order_by('-id')
 
@@ -131,7 +128,6 @@ class SubscribeSerializer(serializers.ModelSerializer):
         )
 
         if request and request.user.is_authenticated:
-            # recipes = obj.recipes.all()
             return serializer(
                 paginated_recipes,
                 many=True,
@@ -140,12 +136,14 @@ class SubscribeSerializer(serializers.ModelSerializer):
         return []
 
     def get_recipes_count(self, obj):
+        """Получение количества рецептов пользователя."""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.recipes.count()
         return 0
 
     def get_is_subscribed(self, obj):
+        """Проверка, подписан ли автор запроса на данного пользователя."""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return Subscriptions.objects.filter(

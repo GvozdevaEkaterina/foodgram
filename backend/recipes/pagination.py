@@ -1,4 +1,12 @@
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import (
+    LimitOffsetPagination,
+    PageNumberPagination
+)
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_query_param = 'page'
+    page_size_query_param = 'limit'
 
 
 class RecipesLimitPagination(LimitOffsetPagination):

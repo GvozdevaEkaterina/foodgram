@@ -4,16 +4,12 @@ from rest_framework import permissions
 User = get_user_model()
 
 
-class AdminOrReadOnlyPermission(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        return (
-                request.method in permissions.SAFE_METHODS
-                or request.user.is_staff
-            )
-
-
 class AuthorOrReadOnlyPermission(permissions.BasePermission):
+    """
+    Контролирует доступ к объектам по авторству:
+    Чтение доступно всем пользователям, изменение - только аутентифицированным
+    пользователям, для существующих объектов - только автору объекта.
+    """
 
     def has_permission(self, request, view):
         return (

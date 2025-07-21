@@ -2,19 +2,26 @@ from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-# from foodgram.serializers import ShortRecipeSerializer
 from .filters import IngredientFilter, RecipeFilter
 from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from .pagination import CustomPageNumberPagination
 from .permissions import AuthorOrReadOnlyPermission
-from .serializers import (IngredientsSerializer, RecipeSerializer,
-                          ShortRecipeSerializer, TagSerializer)
+from .serializers import (
+    IngredientsSerializer,
+    RecipeSerializer,
+    ShortRecipeSerializer,
+    TagSerializer
+)
 
 
 class TagIngredientBaseViewSet(viewsets.ModelViewSet):
+    """
+    Базовый вьюсет для тегов и ингредиентов.
+    Разрешает создание, редактирование и удаление только администратору
+    """
     pagination_class = None
 
     def create(self, request, *args, **kwargs):
@@ -40,11 +47,13 @@ class TagIngredientBaseViewSet(viewsets.ModelViewSet):
 
 
 class TagViewSet(TagIngredientBaseViewSet):
+    """Вьюсет для тегов."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
 
 class IngredientViewSet(TagIngredientBaseViewSet):
+    """Вьюсет для ингредиентов."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientsSerializer
     filter_backends = (DjangoFilterBackend, )
@@ -52,12 +61,21 @@ class IngredientViewSet(TagIngredientBaseViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """
+    Вьюсет для рецептов.
+    Включает в себя несколько кастомных методов:
+    -favorite: позволяет добавить/удалить рецепт из избранного.
+    -shopping_cart: позволяет добавить/удалить рецепт из списка покупок.
+    -download_shopping_cart: позволяет скачать список покупок в формате txt.
+    Если ингредиенты в рецептах повторяются, количество этих продуктов
+    суммируется.
+    """
     queryset = Recipe.objects.all().order_by('-id')
     serializer_class = RecipeSerializer
     permission_classes = (AuthorOrReadOnlyPermission, )
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomPageNumberPagination
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -70,8 +88,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def favorite(self, request, pk=None):
         recipe = self.get_object()
         if request.method == 'POST':
-            if Favorite.objects.filter(user=request.user, recipe=recipe).exists():
-                return Response('Рецепт уже находится в избранном', status=status.HTTP_400_BAD_REQUEST)
+            if Favorite.objects.filter(
+                user=request.user, recipe=recipe
+            ).exists():
+                return Response(
+                    'Рецепт уже находится в избранном',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             Favorite.objects.create(user=request.user, recipe=recipe)
             serializer = ShortRecipeSerializer(
                 recipe,
@@ -80,11 +103,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
-                return Response('Рецепт не был добавлен в избранное', status=status.HTTP_400_BAD_REQUEST)
+            if not Favorite.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).exists():
+                return Response(
+                    'Рецепт не был добавлен в избранное',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             Favorite.objects.filter(user=request.user, recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-
 
     @action(
             detail=True,
@@ -94,8 +122,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def shopping_cart(self, request, pk=None):
         recipe = self.get_object()
         if request.method == 'POST':
-            if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
-                return Response('Рецепт уже находится в корзине', status=status.HTTP_400_BAD_REQUEST)
+            if ShoppingCart.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).exists():
+                return Response(
+                    'Рецепт уже находится в корзине',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             ShoppingCart.objects.create(user=request.user, recipe=recipe)
             serializer = ShortRecipeSerializer(
@@ -105,9 +139,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            if not ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
-                return Response('Рецепт не был добавлен в корзину', status=status.HTTP_400_BAD_REQUEST)
-            ShoppingCart.objects.filter(user=request.user, recipe=recipe).delete()
+            if not ShoppingCart.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).exists():
+                return Response(
+                    'Рецепт не был добавлен в корзину',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            ShoppingCart.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -127,7 +170,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         shopping_list = {}
 
         for item in shopping_cart:
-            # recipe = item.recipe
             for ingredient_recipe in item.recipe.ingredientrecipe_set.all():
                 ingredient = ingredient_recipe.ingredient
                 if ingredient.name not in shopping_list:

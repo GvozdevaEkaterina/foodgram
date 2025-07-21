@@ -1,70 +1,28 @@
-# import base64
-# from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from foodgram.constants import MIN_INGREDIENT_AMOUNT
 from users.fields import Base64ImageField
 from users.serializers import UserDetailSerializer
-
+from .fields import IngredientField, TagField
 from .models import Ingredient, IngredientRecipe, Recipe, Tag
 
 
 class TagSerializer(serializers.ModelSerializer):
-
+    """Сериалайзер для тегов."""
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
-
+    """Сериалайзер для рецептов."""
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit')
 
 
-class IngredientField(serializers.RelatedField):
-
-    def get_queryset(self):
-        return Ingredient.objects.all()
-
-    def to_representation(self, value):
-        return {
-            'id': value.ingredient.id,
-            'name': value.ingredient.name,
-            'measurement_unit': value.ingredient.measurement_unit,
-            'amount': value.amount
-        }
-
-    def to_internal_value(self, data):
-        try:
-            return {
-                'ingredient_id': data['id'],
-                'amount': data['amount']
-            }
-        except Ingredient.DoesNotExist:
-            raise serializers.ValidationError('Ингредиент не найден')
-        except KeyError:
-            raise serializers.ValidationError("Необходимы 'id' и 'amount' ингредиента")
-
-
-class TagField(serializers.RelatedField):
-
-    def to_representation(self, value):
-        return {
-            'id': value.id,
-            'name': value.name,
-            'slug': value.slug
-        }
-
-    def to_internal_value(self, data):
-        try:
-            return Tag.objects.get(id=data)
-        except Tag.DoesNotExist:
-            raise serializers.ValidationError(f'Тег с ID {data} не существует')
-
-
 class ShortRecipeSerializer(serializers.ModelSerializer):
+    """Сериалайзер для рецептов (сокращённая версия)."""
     class Meta:
         model = Recipe
         fields = (
@@ -76,6 +34,11 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
+    """
+    Сериалайзер для рецептов (полная версия).
+    Вычисляет поля is_favorited и is_in_shopping_cart.
+    Проводит валидацию данных полей ingredients и tags.
+    """
 
     author = UserDetailSerializer(read_only=True)
 
@@ -128,14 +91,14 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
         IngredientRecipe.objects.bulk_create(ingredient_recipe)
         return recipe
-    
+
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredientrecipe_set', [])
         tags = validated_data.pop('tags', [])
-        
+
         if tags:
             instance.tags.set(tags)
-        
+
         if ingredients:
             instance.ingredientrecipe_set.all().delete()
             for ingredient in ingredients:
@@ -150,19 +113,31 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError('Это поле не может быть пустым')
 
-        ingredient_ids = [ingredient.get('ingredient_id') for ingredient in value]
+        ingredient_ids = [
+            ingredient.get('ingredient_id') for ingredient in value
+        ]
         if len(set(ingredient_ids)) < len(ingredient_ids):
             raise serializers.ValidationError(
                     'Ингредиенты не должны повторяться'
                 )
         for ingredient in value:
-            if not Ingredient.objects.filter(id=ingredient['ingredient_id']).exists():
+            if not Ingredient.objects.filter(
+                id=ingredient['ingredient_id']
+            ).exists():
                 raise serializers.ValidationError(
                     'Нельзя добавить несуществующий ингредиент'
                 )
-            if ingredient['amount'] < MIN_INGREDIENT_AMOUNT:
+            try:
+                amount = int(ingredient['amount'])
+            except (ValueError, TypeError):
                 raise serializers.ValidationError(
-                    f'Нельзя добавить ингредиент в количестве меньше {MIN_INGREDIENT_AMOUNT}'
+                    'Количество должно быть целым числом'
+                )
+
+            if amount < MIN_INGREDIENT_AMOUNT:
+                raise serializers.ValidationError(
+                    f'Нельзя добавить ингредиент в количестве меньше '
+                    f'{MIN_INGREDIENT_AMOUNT}'
                 )
         return value
 
@@ -174,7 +149,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         if len(set(tag_ids)) < len(tag_ids):
             raise serializers.ValidationError('Теги не должны повторяться')
         return value
-    
+
     def validate(self, data):
         print(data)
         if self.context['request'].method in ['PATCH']:
@@ -193,7 +168,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.is_favorited.filter(user=request.user).exists()
         return False
-    
+
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:

@@ -6,13 +6,28 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Subscriptions
-from .serializers import (AvatarSerializer, CustomUserCreateSerializer,
-                          SubscribeSerializer, UserDetailSerializer)
+from .serializers import (
+    AvatarSerializer,
+    CustomUserCreateSerializer,
+    SubscribeSerializer,
+    UserDetailSerializer
+)
 
 User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """
+    Вьюсет для работы с пользователями.
+    Использует разные сериалайзеры для создания и просмотра профиля
+    пользователя.
+    Имеет кастомные эндпоинты:
+    '/me/avatar': Добавление/удаление аватара
+    '/me': Страница текущего пользователя
+    'subscribe': Подписка на пользователя / отписка от него
+    'subscriptions': Просмотр всех пользователей, на которых подписан автор
+    запроса.
+    """
     queryset = User.objects.all()
     permission_classes = (AllowAny, )
     pagination_class = LimitOffsetPagination
@@ -56,7 +71,7 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     @action(detail=False, methods=['get'], url_path='me')
     def get_me(self, request):
         if not request.user.is_authenticated:

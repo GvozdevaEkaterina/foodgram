@@ -4,6 +4,8 @@ from .models import Ingredient, Recipe, Tag
 
 
 class IngredientFilter(filters.FilterSet):
+    """Фильтрует ингредиенты для рецепта по вхождению в начало слова."""
+
     name = filters.CharFilter(lookup_expr='istartswith')
 
     class Meta:
@@ -12,6 +14,10 @@ class IngredientFilter(filters.FilterSet):
 
 
 class RecipeFilter(filters.FilterSet):
+    """
+    Фильтрует рецепты по полям 'tags', 'is_favorited', 'is_in_shopping_cart',
+    'author'.
+    """
     tags = filters.ModelMultipleChoiceFilter(
         queryset=Tag.objects.all(),
         field_name='tags__slug',
@@ -45,4 +51,3 @@ class RecipeFilter(filters.FilterSet):
         if value and self.request.user.is_authenticated:
             return queryset.filter(is_in_shopping_cart__user=self.request.user)
         return queryset
-
