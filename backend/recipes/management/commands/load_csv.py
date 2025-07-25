@@ -1,7 +1,7 @@
 import csv
+import os
 
 from django.core.management.base import BaseCommand
-
 from recipes.models import Ingredient
 
 
@@ -9,7 +9,8 @@ class Command(BaseCommand):
     help = 'Load data from CSV files into the database'
 
     def handle(self, *args, **options):
-        with open('../data/ingredients.csv', encoding='utf-8') as f:
+        csv_path = os.path.join(os.getcwd(), 'data', 'ingredients.csv')
+        with open(csv_path, encoding='utf-8') as f:
             reader = csv.reader(f)
             for row in reader:
                 name, measurement_unit = row

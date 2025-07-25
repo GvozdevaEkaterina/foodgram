@@ -9,12 +9,8 @@ from .filters import IngredientFilter, RecipeFilter
 from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from .pagination import CustomPageNumberPagination
 from .permissions import AuthorOrReadOnlyPermission
-from .serializers import (
-    IngredientsSerializer,
-    RecipeSerializer,
-    ShortRecipeSerializer,
-    TagSerializer
-)
+from .serializers import (IngredientsSerializer, RecipeSerializer,
+                          ShortRecipeSerializer, TagSerializer)
 
 
 class TagIngredientBaseViewSet(viewsets.ModelViewSet):
@@ -81,9 +77,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     @action(
-            detail=True,
-            methods=['post', 'delete'],
-            permission_classes=[IsAuthenticated]
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
     )
     def favorite(self, request, pk=None):
         recipe = self.get_object()
@@ -115,9 +111,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
-            detail=True,
-            methods=['post', 'delete'],
-            permission_classes=[IsAuthenticated]
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
         recipe = self.get_object()
@@ -153,11 +149,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             ).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-
     @action(
-            detail=False,
-            methods=['get'],
-            permission_classes=[IsAuthenticated]
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
         shopping_cart = ShoppingCart.objects.filter(
@@ -178,13 +173,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
                         ingredient.measurement_unit
                     ]
                 else:
-                    shopping_list[ingredient.name][0] += ingredient_recipe.amount
+                    shopping_list[ingredient.name][0] += \
+                        ingredient_recipe.amount
 
         file_content = 'Список покупок:\n\n'
         for ingredient in shopping_list:
             file_content += (
-                f'- {ingredient}: {shopping_list[ingredient][0]} {shopping_list[ingredient][1]}\n'
+                f'- {ingredient}: '
+                f'{shopping_list[ingredient][0]} '
+                f'{shopping_list[ingredient][1]}\n'
             )
         response = HttpResponse(file_content, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
         return response

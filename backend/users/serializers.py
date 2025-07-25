@@ -1,11 +1,12 @@
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer
+from recipes.pagination import RecipesLimitPagination
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from users.fields import Base64ImageField
 
 from foodgram.constants import MAX_NAME_LENGTH
-from recipes.pagination import RecipesLimitPagination
-from users.fields import Base64ImageField
+
 from .models import Subscriptions
 
 User = get_user_model()
@@ -42,6 +43,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
             'last_name',
             'password'
         )
+
 
 class BaseAvatarSerializer(serializers.ModelSerializer):
     """Базовый сериалайзер для работы с аватарками."""

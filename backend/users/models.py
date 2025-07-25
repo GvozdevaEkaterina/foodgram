@@ -10,6 +10,7 @@ class MyUser(AbstractUser):
         null=True,
         default=None
     )
+
     class Meta:
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'

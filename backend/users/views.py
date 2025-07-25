@@ -6,12 +6,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Subscriptions
-from .serializers import (
-    AvatarSerializer,
-    CustomUserCreateSerializer,
-    SubscribeSerializer,
-    UserDetailSerializer
-)
+from .serializers import (AvatarSerializer, CustomUserCreateSerializer,
+                          SubscribeSerializer, UserDetailSerializer)
 
 User = get_user_model()
 
@@ -37,12 +33,16 @@ class UserViewSet(viewsets.ModelViewSet):
             return CustomUserCreateSerializer
         return UserDetailSerializer
 
-    @action(detail=False, methods=['put', 'get', 'delete'], url_path='me/avatar')
+    @action(
+        detail=False,
+        methods=['put', 'get', 'delete'],
+        url_path='me/avatar'
+    )
     def add_avatar(self, request):
         user = request.user
         if (
-            not user.is_authenticated and
-            (request.method == 'PUT' or request.method == 'DELETE')
+            not user.is_authenticated
+            and (request.method == 'PUT' or request.method == 'DELETE')
         ):
             return Response(
                 {'error': 'Authentication required'},
@@ -82,7 +82,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = UserDetailSerializer(
             request.user,
             context={'request': request}
-    )
+        )
         return Response(serializer.data)
 
     @action(
@@ -144,7 +144,8 @@ class UserViewSet(viewsets.ModelViewSet):
             many=True,
             context={'request': request}
         )
-        return (self.get_paginated_response(serializer.data)
-                if page is not None
-                else Response(serializer.data)
+        return (
+            self.get_paginated_response(serializer.data)
+            if page is not None
+            else Response(serializer.data)
         )

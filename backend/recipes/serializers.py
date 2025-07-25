@@ -1,8 +1,9 @@
 from rest_framework import serializers
-
-from foodgram.constants import MIN_INGREDIENT_AMOUNT
 from users.fields import Base64ImageField
 from users.serializers import UserDetailSerializer
+
+from foodgram.constants import MIN_INGREDIENT_AMOUNT
+
 from .fields import IngredientField, TagField
 from .models import Ingredient, IngredientRecipe, Recipe, Tag
 
@@ -118,8 +119,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
         if len(set(ingredient_ids)) < len(ingredient_ids):
             raise serializers.ValidationError(
-                    'Ингредиенты не должны повторяться'
-                )
+                'Ингредиенты не должны повторяться'
+            )
         for ingredient in value:
             if not Ingredient.objects.filter(
                 id=ingredient['ingredient_id']
