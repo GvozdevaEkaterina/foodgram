@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from users.fields import Base64ImageField
-from users.serializers import UserDetailSerializer
 
 from foodgram.constants import MIN_INGREDIENT_AMOUNT
+from users.fields import Base64ImageField
+from users.serializers import UserDetailSerializer
 
 from .fields import IngredientField, TagField
 from .models import Ingredient, IngredientRecipe, Recipe, Tag

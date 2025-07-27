@@ -1,4 +1,4 @@
-from django.db.models import Q, Case, When, Value, IntegerField
+from django.db.models import Case, IntegerField, Q, Value, When
 from django_filters import rest_framework as filters
 
 from .models import Ingredient, Recipe, Tag
