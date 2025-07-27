@@ -7,7 +7,7 @@ volumes:
 
 services:
   db:
-    container_name: foodgram-db
+    container_name: db
     image: postgres:13
     env_file: ../.env
     volumes:
@@ -16,6 +16,8 @@ services:
       - foodgram_network
 
   backend:
+    ports:
+      - "1337:8000"
     container_name: foodgram-back
     image: katerishna/foodgram-backend
     env_file: ../.env
