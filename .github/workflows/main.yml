@@ -15,6 +15,10 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: 3.9
+    - name: Check config file visibility
+      run: |
+        ls -la
+        cat setup.cfg
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip 
