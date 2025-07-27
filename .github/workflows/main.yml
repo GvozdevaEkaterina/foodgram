@@ -20,7 +20,7 @@ jobs:
         python -m pip install --upgrade pip 
         pip install -r backend/requirements.txt
     - name: Test with flake8
-      working-directory: foodgram/backend
+      working-directory: backend
       run: flake8 .
 
   build_backend_and_push_to_docker_hub:
