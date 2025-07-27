@@ -1,16 +1,37 @@
+from django.db.models import Q, Case, When, Value, IntegerField
 from django_filters import rest_framework as filters
 
 from .models import Ingredient, Recipe, Tag
 
 
 class IngredientFilter(filters.FilterSet):
-    """Фильтрует ингредиенты для рецепта по вхождению в начало слова."""
-
-    name = filters.CharFilter(lookup_expr='istartswith')
+    """
+    Фильтрует ингредиенты для рецепта по вхождению в начало и в середину слова.
+    """
+    name = filters.CharFilter(method='filter_by_name')
 
     class Meta:
         model = Ingredient
         fields = ('name', )
+
+    def filter_by_name(self, queryset, name, value):
+
+        if not value:
+            return queryset
+
+        starts_with = Q(name__istartswith=value)
+        contains = Q(name__icontains=value)
+
+        result = queryset.filter(contains).annotate(
+            priority=Case(
+                When(starts_with, then=Value(0)),
+                When(contains, then=Value(1)),
+                default=Value(2),
+                output_field=IntegerField()
+            )
+        ).order_by('priority', 'name')
+
+        return result
 
 
 class RecipeFilter(filters.FilterSet):
