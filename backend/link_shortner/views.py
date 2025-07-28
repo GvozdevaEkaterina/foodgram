@@ -23,6 +23,6 @@ def redirect_short_link(request, short_code):
 
     try:
         recipe_id = decode_url(short_code)
-        return redirect(f'http://{request.get_host()}/recipes/{recipe_id}/')
+        return redirect(f'https://{request.get_host()}/recipes/{recipe_id}/')
     except ValueError:
         return redirect('/recipes/')
