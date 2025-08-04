@@ -1,25 +1,19 @@
 from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer
+from djoser.serializers import UserCreateSerializer as UserCS
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from foodgram.constants import MAX_NAME_LENGTH
-from recipes.pagination import RecipesLimitPagination
-from users.fields import Base64ImageField
-
+from core.fields import Base64ImageField
+from core.pagination import RecipesLimitPagination
+from core.serializers import ShortRecipeSerializer, UserDetailSerializer
 from .models import Subscriptions
 
 User = get_user_model()
 
 
-def get_short_recipe_serializer():
-    """Импорт ShortRecipeSerializer, чтобы избежать цикличного импорта."""
-    from recipes.serializers import ShortRecipeSerializer
-    return ShortRecipeSerializer
-
-
-class CustomUserCreateSerializer(UserCreateSerializer):
-    """Кастомный сериалайзер создания пользователя."""
+class UserCreateSerializer(UserCS):
+    """Сериализатор создания пользователя."""
     email = serializers.EmailField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())]
@@ -45,63 +39,58 @@ class CustomUserCreateSerializer(UserCreateSerializer):
         )
 
 
-class BaseAvatarSerializer(serializers.ModelSerializer):
-    """Базовый сериалайзер для работы с аватарками."""
+class AvatarSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с аватарками."""
     avatar = Base64ImageField(required=False, allow_null=True)
 
     class Meta:
-        abstract = True
-
-    def update(self, instance, validated_data):
-        avatar = validated_data.pop('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        instance.save()
-        return instance
-
-
-class UserDetailSerializer(BaseAvatarSerializer):
-    """Кастомный сериалайзер получения данных о пользователе."""
-    is_subscribed = serializers.SerializerMethodField()
-
-    class Meta:
         model = User
-        fields = (
-            'id',
-            'email',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'avatar'
-        )
+        fields = ('avatar',)
 
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Subscriptions.objects.filter(
-                user=request.user,
-                author=obj
-            ).exists()
-        return False
-
-
-class AvatarSerializer(BaseAvatarSerializer):
-    """Сериалайзер для работы с аватарками."""
-    class Meta:
-        model = User
-        fields = (
-            'avatar',
-        )
+    def validate(self, data):
+        if 'avatar' not in data:
+            raise serializers.ValidationError(
+                {'avatar': 'Это поле обязательно при обновлении'},
+            )
+        return data
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
-    """Сериалайзер для работы с подписками."""
+    """Сериализатор для создания подписки"""
+    class Meta:
+        model = Subscriptions
+        fields = (
+            'user',
+            'author'
+        )
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+    def validate(self, data):
+        if data['user'] == data['author']:
+            raise serializers.ValidationError('Нельзя подписаться на себя')
+        if Subscriptions.objects.filter(
+            user=data['user'],
+            author=data['author']
+        ).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого пользователя'
+            )
+        return data
+
+    def to_representation(self, value):
+        return SubscriptionsSerializer(
+            value.author,
+            context=self.context
+        ).data
+
+
+class SubscriptionsSerializer(UserDetailSerializer):
+    """Сериализатор для работы с подписками."""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
-    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -121,21 +110,16 @@ class SubscribeSerializer(serializers.ModelSerializer):
         """Получение рецептов пользователя."""
         request = self.context.get('request')
         recipes = obj.recipes.all().order_by('-id')
-
-        serializer = get_short_recipe_serializer()
         paginator = RecipesLimitPagination()
         paginated_recipes = paginator.paginate_queryset(
             recipes,
             request
         )
-
-        if request and request.user.is_authenticated:
-            return serializer(
-                paginated_recipes,
-                many=True,
-                context={'request': request}
-            ).data
-        return []
+        return ShortRecipeSerializer(
+            paginated_recipes,
+            many=True,
+            context={'request': request}
+        ).data
 
     def get_recipes_count(self, obj):
         """Получение количества рецептов пользователя."""
@@ -143,13 +127,3 @@ class SubscribeSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.recipes.count()
         return 0
-
-    def get_is_subscribed(self, obj):
-        """Проверка, подписан ли автор запроса на данного пользователя."""
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Subscriptions.objects.filter(
-                user=request.user,
-                author=obj
-            ).exists()
-        return False

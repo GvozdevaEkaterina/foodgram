@@ -5,12 +5,16 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.serializers import ShortRecipeSerializer
 from .filters import IngredientFilter, RecipeFilter
 from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
-from .pagination import CustomPageNumberPagination
+from .pagination import PageNumberPagination
 from .permissions import AuthorOrReadOnlyPermission
-from .serializers import (IngredientsSerializer, RecipeSerializer,
-                          ShortRecipeSerializer, TagSerializer)
+from .serializers import (
+    IngredientsSerializer,
+    RecipeSerializer,
+    TagSerializer
+)
 
 
 class TagIngredientBaseViewSet(viewsets.ModelViewSet):
@@ -71,83 +75,82 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (AuthorOrReadOnlyPermission, )
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = CustomPageNumberPagination
+    pagination_class = PageNumberPagination
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=['post'],
         permission_classes=[IsAuthenticated]
     )
     def favorite(self, request, pk=None):
         recipe = self.get_object()
-        if request.method == 'POST':
-            if Favorite.objects.filter(
-                user=request.user, recipe=recipe
-            ).exists():
-                return Response(
-                    'Рецепт уже находится в избранном',
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            Favorite.objects.create(user=request.user, recipe=recipe)
-            serializer = ShortRecipeSerializer(
+        if not Favorite.objects.get_or_create(
+            user=request.user,
+            recipe=recipe
+        )[1]:
+            return Response(
+                'Рецепт уже находится в избранном',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            ShortRecipeSerializer(
                 recipe,
                 context={'request': request}
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            ).data,
+            status=status.HTTP_201_CREATED
+        )
 
-        if request.method == 'DELETE':
-            if not Favorite.objects.filter(
-                user=request.user,
-                recipe=recipe
-            ).exists():
-                return Response(
-                    'Рецепт не был добавлен в избранное',
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            Favorite.objects.filter(user=request.user, recipe=recipe).delete()
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk=None):
+        recipe = self.get_object()
+        if Favorite.objects.filter(
+            user=request.user,
+            recipe=recipe
+        ).delete()[0]:
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            'Рецепт не был добавлен в избранное',
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=['post'],
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
         recipe = self.get_object()
-        if request.method == 'POST':
-            if ShoppingCart.objects.filter(
-                user=request.user,
-                recipe=recipe
-            ).exists():
-                return Response(
-                    'Рецепт уже находится в корзине',
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            ShoppingCart.objects.create(user=request.user, recipe=recipe)
-            serializer = ShortRecipeSerializer(
+        if not ShoppingCart.objects.get_or_create(
+            user=request.user,
+            recipe=recipe
+        )[1]:
+            return Response(
+                'Рецепт уже находится в корзине',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            ShortRecipeSerializer(
                 recipe,
                 context={'request': request}
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            ).data,
+            status=status.HTTP_201_CREATED
+        )
 
-        if request.method == 'DELETE':
-            if not ShoppingCart.objects.filter(
-                user=request.user,
-                recipe=recipe
-            ).exists():
-                return Response(
-                    'Рецепт не был добавлен в корзину',
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            ShoppingCart.objects.filter(
-                user=request.user,
-                recipe=recipe
-            ).delete()
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk=None):
+        recipe = self.get_object()
+        if ShoppingCart.objects.filter(
+            user=request.user,
+            recipe=recipe
+        ).delete()[0]:
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            'Рецепт не был добавлен в корзину',
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(
         detail=False,

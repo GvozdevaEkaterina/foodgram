@@ -1,15 +1,8 @@
 from django.contrib import admin
 
-from .models import Ingredient, IngredientRecipe, Recipe, Tag, TagRecipe
+from .models import Ingredient, IngredientRecipe, Recipe, Tag
 
 admin.site.empty_value_display = 'Не задано'
-
-
-class TagRecipeInline(admin.TabularInline):
-    model = TagRecipe
-    extra = 1
-    verbose_name = 'Тег'
-    verbose_name_plural = 'Теги'
 
 
 class IngredientRecipeInline(admin.TabularInline):
@@ -43,12 +36,11 @@ class RecipeAdmin(admin.ModelAdmin):
     )
 
     inlines = (
-        TagRecipeInline,
-        IngredientRecipeInline
+        IngredientRecipeInline,
     )
 
     def get_favorites_count(self, obj):
-        return obj.is_favorited.count()
+        return obj.favorite_set.count()
     get_favorites_count.short_description = 'В избранном'
 
 
@@ -63,9 +55,6 @@ class IngredientAdmin(admin.ModelAdmin):
 
 
 class TagAdmin(admin.ModelAdmin):
-    inlines = (
-        TagRecipeInline,
-    )
     list_display = (
         'name',
         'slug'

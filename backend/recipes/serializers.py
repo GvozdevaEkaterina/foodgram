@@ -1,42 +1,30 @@
 from rest_framework import serializers
 
 from foodgram.constants import MIN_INGREDIENT_AMOUNT
-from users.fields import Base64ImageField
-from users.serializers import UserDetailSerializer
+from core.fields import Base64ImageField
+from core.serializers import UserDetailSerializer
 
 from .fields import IngredientField, TagField
 from .models import Ingredient, IngredientRecipe, Recipe, Tag
 
 
 class TagSerializer(serializers.ModelSerializer):
-    """Сериалайзер для тегов."""
+    """Сериализатор для тегов."""
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
-    """Сериалайзер для рецептов."""
+    """Сериализатор для рецептов."""
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit')
 
 
-class ShortRecipeSerializer(serializers.ModelSerializer):
-    """Сериалайзер для рецептов (сокращённая версия)."""
-    class Meta:
-        model = Recipe
-        fields = (
-            'id',
-            'name',
-            'image',
-            'cooking_time'
-        )
-
-
 class RecipeSerializer(serializers.ModelSerializer):
     """
-    Сериалайзер для рецептов (полная версия).
+    Сериализатор для рецептов (полная версия).
     Вычисляет поля is_favorited и is_in_shopping_cart.
     Проводит валидацию данных полей ingredients и tags.
     """
@@ -152,7 +140,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        print(data)
         if self.context['request'].method in ['PATCH']:
             if 'tags' not in data:
                 raise serializers.ValidationError(
@@ -167,11 +154,11 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.is_favorited.filter(user=request.user).exists()
+            return obj.favorite_recipe.filter(user=request.user).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.is_in_shopping_cart.filter(user=request.user).exists()
+            return obj.shoppingcart_recipe.filter(user=request.user).exists()
         return False
