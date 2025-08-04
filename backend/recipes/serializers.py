@@ -143,7 +143,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         if self.context['request'].method in ['PATCH']:
             if 'tags' not in data:
                 raise serializers.ValidationError(
-                    {'tags': 'Это поле обязательно при обновлении'},
+                    {'tags': 'Это поле обязательно при обновлении '},
                 )
             if 'ingredientrecipe_set' not in data:
                 raise serializers.ValidationError(
