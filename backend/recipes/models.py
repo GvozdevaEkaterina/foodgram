@@ -110,7 +110,7 @@ class Recipe(models.Model):
 
     class Meta:
         verbose_name = 'рецепт'
-        verbose_name_plural = 'Рецепты'
+        verbose_name_plural = 'рецепты'
 
     def __str__(self):
         return self.name
