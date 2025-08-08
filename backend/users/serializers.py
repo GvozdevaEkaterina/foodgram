@@ -153,4 +153,3 @@ class SubscriptionsSerializer(UserDetailSerializer):
     def get_recipes_count(self, obj):
         """Получение количества рецептов пользователя."""
         return obj.recipes.count()
-

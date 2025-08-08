@@ -246,7 +246,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
             recipe=data['recipe']
         ).exists():
             raise serializers.ValidationError(
-                 'Рецепт уже находится в избранном'
+                'Рецепт уже находится в избранном'
             )
         return data
 
@@ -276,7 +276,7 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
             recipe=data['recipe']
         ).exists():
             raise serializers.ValidationError(
-                 'Рецепт уже находится в корзине'
+                'Рецепт уже находится в корзине'
             )
         return data
 

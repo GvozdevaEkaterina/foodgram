@@ -9,6 +9,7 @@ from short_url import decode_url, encode_url
 
 from recipes.models import Recipe
 
+
 @api_view(['GET'])
 def get_short_link(request, recipe_pk):
     """Генерирует короткую ссылку на рецепт."""
@@ -23,7 +24,7 @@ def redirect_short_link(request, short_code):
     """Переадресовывает с короткой ссылки на полную страницу рецепта."""
     try:
         recipe_id = decode_url(short_code)
-        recipe = get_object_or_404(Recipe, id=recipe_id)
+        get_object_or_404(Recipe, id=recipe_id)
         return redirect(f'https://{request.get_host()}/recipes/{recipe_id}/')
     except (ValueError, Http404):
         return redirect('/not_found/')

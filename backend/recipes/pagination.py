@@ -5,6 +5,7 @@ from rest_framework.pagination import (
 
 from foodgram.constants import PAGE_SIZE_QUERY_PARAM, PAGE_QUERY_PARAM
 
+
 class PageNumberPagination(PNPagination):
     page_query_param = PAGE_QUERY_PARAM
     page_size_query_param = PAGE_SIZE_QUERY_PARAM
