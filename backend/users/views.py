@@ -10,13 +10,14 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 
-from core.serializers import UserDetailSerializer
+from recipes.pagination import PageNumberPagination
 from .models import Subscriptions
 from .serializers import (
     AvatarSerializer,
     UserCreateSerializer,
     SubscribeSerializer,
     SubscriptionsSerializer,
+    UserDetailSerializer
 )
 
 User = get_user_model()
@@ -41,6 +42,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create' or self.action == 'update':
             return UserCreateSerializer
+        elif self.action == 'subscriptions':
+            return SubscriptionsSerializer
         return UserDetailSerializer
 
     def get_queryset(self):
@@ -76,13 +79,6 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(
             {'error': 'Аватар не найден'},
             status=status.HTTP_400_BAD_REQUEST
-        )
-
-    @avatar.mapping.get
-    def get_avatar(self, request):
-        user = request.user
-        return Response(
-            {'avatar': request.build_absolute_uri(user.avatar.url)}
         )
 
     @action(
@@ -134,17 +130,20 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['get'],
         permission_classes=[IsAuthenticated],
-        pagination_class=LimitOffsetPagination
+        pagination_class=PageNumberPagination
     )
     def subscriptions(self, request):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        serializer = SubscriptionsSerializer(
-            page,
-            many=True,
-            context={'request': request}
-        )
-        return self.get_paginated_response(serializer.data)
+        self.queryset = User.objects.filter(
+            following__user=request.user
+        ).prefetch_related('recipes')
+        # page = self.paginate_queryset(queryset)
+        # serializer = SubscriptionsSerializer(
+        #     page,
+        #     many=True,
+        #     context={'request': request}
+        # )
+        # return self.get_paginated_response(serializer.data)
+        return self.list(request)
 
     @action(
         detail=False,

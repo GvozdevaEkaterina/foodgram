@@ -1,18 +1,46 @@
 from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer as UserCS
+from djoser.serializers import UserCreateSerializer as DjoserUserCS
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from foodgram.constants import MAX_NAME_LENGTH
 from core.fields import Base64ImageField
-from core.pagination import RecipesLimitPagination
-from core.serializers import ShortRecipeSerializer, UserDetailSerializer
+from core.serializers import ShortRecipeSerializer
+from recipes.pagination import RecipesLimitPagination
 from .models import Subscriptions
 
 User = get_user_model()
 
 
-class UserCreateSerializer(UserCS):
+class UserDetailSerializer(serializers.ModelSerializer):
+    """Сериализатор получения данных о пользователе."""
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'email',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'avatar'
+        )
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        return (
+            request
+            and request.user.is_authenticated
+            and Subscriptions.objects.filter(
+                user=request.user,
+                author=obj
+            ).exists()
+        )
+
+
+class UserCreateSerializer(DjoserUserCS):
     """Сериализатор создания пользователя."""
     email = serializers.EmailField(
         required=True,
@@ -37,6 +65,11 @@ class UserCreateSerializer(UserCS):
             'last_name',
             'password'
         )
+
+    def validate_username(self, value):
+        if value.lower() == 'me':
+            raise serializers.ValidationError('Username "me" недоступен')
+        return value
 
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -63,10 +96,6 @@ class SubscribeSerializer(serializers.ModelSerializer):
             'user',
             'author'
         )
-
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
 
     def validate(self, data):
         if data['user'] == data['author']:
@@ -123,7 +152,5 @@ class SubscriptionsSerializer(UserDetailSerializer):
 
     def get_recipes_count(self, obj):
         """Получение количества рецептов пользователя."""
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return obj.recipes.count()
-        return 0
+        return obj.recipes.count()
+

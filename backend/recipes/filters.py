@@ -36,8 +36,7 @@ class IngredientFilter(filters.FilterSet):
 
 class RecipeFilter(filters.FilterSet):
     """
-    Фильтрует рецепты по полям 'tags', 'is_favorited', 'is_in_shopping_cart',
-    'author'.
+    Фильтрует рецепты по полям 'tags', 'is_favorited', 'is_in_shopping_cart'.
     """
     tags = filters.ModelMultipleChoiceFilter(
         queryset=Tag.objects.all(),
@@ -52,11 +51,6 @@ class RecipeFilter(filters.FilterSet):
     is_in_shopping_cart = filters.BooleanFilter(
         method='filter_shopping_cart',
         label='Is_In_Shopping_Cart'
-    )
-    author = filters.NumberFilter(
-        field_name='author__id',
-        label='author_id',
-        lookup_expr='exact',
     )
 
     class Meta:

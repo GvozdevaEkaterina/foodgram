@@ -19,7 +19,7 @@ urlpatterns = [
     path('api/auth/', include('djoser.urls.authtoken')),
     path('api/', include(router.urls)),
     path(
-        'api/recipes/<int:pk>/get-link/',
+        'api/recipes/<int:recipe_pk>/get-link/',
         get_short_link,
         name='get_short_link'
     ),

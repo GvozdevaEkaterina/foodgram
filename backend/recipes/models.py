@@ -70,7 +70,6 @@ class Recipe(models.Model):
     tags = models.ManyToManyField(
         Tag,
         related_name='recipes',
-        default=False,
         verbose_name='Теги'
     )
     author = models.ForeignKey(
@@ -137,6 +136,14 @@ class IngredientRecipe(models.Model):
         default=1
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_recipe_ingredient'
+            )
+        ]
+
     def __str__(self):
         return f'{self.ingredient} {self.recipe}'
 
@@ -162,10 +169,17 @@ class FavoriteShoppingCart(models.Model):
             )
         ]
 
+    def __str__(self):
+        return f'{self.user} : {self.recipe}'
+
 
 class Favorite(FavoriteShoppingCart):
-    ...
+    class Meta:
+        verbose_name = 'избранное'
+        verbose_name_plural = 'избранное'
 
 
 class ShoppingCart(FavoriteShoppingCart):
-    ...
+    class Meta:
+        verbose_name = 'корзина'
+        verbose_name_plural = 'корзины'

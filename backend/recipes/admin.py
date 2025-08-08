@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Ingredient, IngredientRecipe, Recipe, Tag
+from .models import (
+    Favorite,
+    Ingredient,
+    IngredientRecipe,
+    Recipe,
+    ShoppingCart,
+    Tag
+)
 
 admin.site.empty_value_display = 'Не задано'
 
@@ -8,14 +15,16 @@ admin.site.empty_value_display = 'Не задано'
 class IngredientRecipeInline(admin.TabularInline):
     model = IngredientRecipe
     extra = 1
+    min_num = 1
     verbose_name = 'Ингредиент'
     verbose_name_plural = 'Ингредиенты'
 
 
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
-        'author',
         'name',
+        'author',
+        'get_favorites_count',
     )
     search_fields = (
         'author__username',
@@ -32,16 +41,15 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     filter_horizontal = (
         'tags',
-        'ingredients',
     )
 
     inlines = (
         IngredientRecipeInline,
     )
 
+    @admin.display(description='В избранном')
     def get_favorites_count(self, obj):
-        return obj.favorite_set.count()
-    get_favorites_count.short_description = 'В избранном'
+        return obj.favorite_recipe.count()
 
 
 class IngredientAdmin(admin.ModelAdmin):
@@ -61,6 +69,22 @@ class TagAdmin(admin.ModelAdmin):
     )
 
 
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'recipe'
+    )
+
+
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'recipe'
+    )
+
+
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag, TagAdmin)
+admin.site.register(Favorite, FavoriteAdmin)
+admin.site.register(ShoppingCart, ShoppingCartAdmin)
