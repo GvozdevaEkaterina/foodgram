@@ -25,6 +25,6 @@ def redirect_short_link(request, short_code):
     try:
         recipe_id = decode_url(short_code)
         get_object_or_404(Recipe, id=recipe_id)
-        return redirect(f'https://{request.get_host()}/recipes/{recipe_id}/')
+        return redirect(f'https://{request.get_host()}/recipes/{recipe_id}')
     except (ValueError, Http404):
-        return redirect(f'https://{request.get_host()}/not_found/')
+        return redirect(f'https://{request.get_host()}/not_found')
