@@ -24,7 +24,9 @@ def redirect_short_link(request, short_code):
     """Переадресовывает с короткой ссылки на полную страницу рецепта."""
     try:
         recipe_id = decode_url(short_code)
-        get_object_or_404(Recipe, id=recipe_id)
+        Recipe.objects.get(id=recipe_id)
         return redirect(f'https://{request.get_host()}/recipes/{recipe_id}')
-    except (ValueError, Http404):
+    except (ValueError):
+        return redirect(f'https://{request.get_host()}/not_found')
+    except Recipe.DoesNotExist:
         return redirect(f'https://{request.get_host()}/not_found')

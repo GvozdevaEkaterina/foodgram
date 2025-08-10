@@ -14,23 +14,14 @@ from .models import (
 )
 
 
-class CreateTagSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания тегов."""
-    id = serializers.IntegerField()
-
-    class Meta:
-        model = Tag
-        fields = ('id')
-
-
-class DisplayTagSerializer(serializers.ModelSerializer):
+class TagReadSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения тегов."""
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
 
 
-class CreateIngredientsSerializer(serializers.ModelSerializer):
+class IngredientCreateSerializer(serializers.ModelSerializer):
     """Сериализатор для создания ингредиентов."""
     id = serializers.IntegerField()
     amount = serializers.IntegerField(min_value=MIN_INGREDIENT_AMOUNT)
@@ -40,7 +31,7 @@ class CreateIngredientsSerializer(serializers.ModelSerializer):
         fields = ('id', 'amount')
 
 
-class DisplayIngredientSerializer(serializers.ModelSerializer):
+class IngredientDisplaySerializer(serializers.ModelSerializer):
     """Сериализатор для отображения ингредиентов."""
     class Meta:
         model = Ingredient
@@ -60,7 +51,7 @@ class IngredientsRecipeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
-class CreateRecipeSerializer(serializers.ModelSerializer):
+class RecipeCreateSerializer(serializers.ModelSerializer):
     """
     Сериализатор для создания рецептов.
     Проводит валидацию данных полей ingredients и tags.
@@ -69,7 +60,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         required=True,
         allow_null=False
     )
-    ingredients = CreateIngredientsSerializer(
+    ingredients = IngredientCreateSerializer(
         many=True,
         required=True
     )
@@ -91,17 +82,17 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance):
-        return DisplayRecipeSerializer(instance, context=self.context).data
+        return RecipeDisplaySerializer(instance, context=self.context).data
 
-    def create_recipe_ingredients(self, recipe, ingredients):
-        return [
+    def create_ingredients_in_recipe(self, recipe, ingredients):
+        IngredientRecipe.objects.bulk_create([
             IngredientRecipe(
                 recipe=recipe,
                 ingredient_id=ingredient['id'],
                 amount=ingredient['amount']
             )
             for ingredient in ingredients
-        ]
+        ])
 
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
@@ -109,18 +100,15 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags', [])
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
-        ingredient_recipe = self.create_recipe_ingredients(recipe, ingredients)
-        IngredientRecipe.objects.bulk_create(ingredient_recipe)
+        self.create_ingredients_in_recipe(recipe, ingredients)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients', [])
         tags = validated_data.pop('tags', [])
         instance.tags.set(tags)
-        instance.ingredientrecipe_set.all().delete()
-        IngredientRecipe.objects.bulk_create(
-            self.create_recipe_ingredients(instance, ingredients)
-        )
+        instance.ingredients.clear()
+        self.create_ingredients_in_recipe(instance, ingredients)
         return super().update(instance, validated_data)
 
     def validate_ingredients(self, value):
@@ -174,7 +162,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         return data
 
 
-class DisplayRecipeSerializer(serializers.ModelSerializer):
+class RecipeDisplaySerializer(serializers.ModelSerializer):
     """
     Сериализатор для отображения рецептов (полная версия).
     Вычисляет поля is_favorited и is_in_shopping_cart.
@@ -185,7 +173,7 @@ class DisplayRecipeSerializer(serializers.ModelSerializer):
         many=True,
         source='ingredientrecipe_set'
     )
-    tags = DisplayTagSerializer(
+    tags = TagReadSerializer(
         many=True,
     )
     image = Base64ImageField(
@@ -236,10 +224,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
             'recipe'
         )
 
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
-
     def validate(self, data):
         if Favorite.objects.filter(
             user=data['user'],
@@ -265,10 +249,6 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
             'user',
             'recipe'
         )
-
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
 
     def validate(self, data):
         if ShoppingCart.objects.filter(

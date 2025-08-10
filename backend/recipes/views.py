@@ -1,5 +1,4 @@
 from django.db.models import Sum
-from django.db.models.query import prefetch_related_objects
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
@@ -8,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
+from .mixins import PatchModelMixin
 from .models import (
     Favorite,
     Ingredient,
@@ -18,10 +18,10 @@ from .models import (
 )
 from .permissions import AuthorOrReadOnlyPermission
 from .serializers import (
-    CreateRecipeSerializer,
-    DisplayIngredientSerializer,
-    DisplayRecipeSerializer,
-    DisplayTagSerializer,
+    RecipeCreateSerializer,
+    IngredientDisplaySerializer,
+    RecipeDisplaySerializer,
+    TagReadSerializer,
     FavoriteSerializer,
     ShoppingCartSerializer
 )
@@ -39,38 +39,15 @@ class TagIngredientBaseViewSet(
 class TagViewSet(TagIngredientBaseViewSet):
     """Вьюсет для тегов."""
     queryset = Tag.objects.all()
-    serializer_class = DisplayTagSerializer
+    serializer_class = TagReadSerializer
 
 
 class IngredientViewSet(TagIngredientBaseViewSet):
     """Вьюсет для ингредиентов."""
     queryset = Ingredient.objects.all()
-    serializer_class = DisplayIngredientSerializer
+    serializer_class = IngredientDisplaySerializer
     filter_backends = (DjangoFilterBackend, )
     filterset_class = IngredientFilter
-
-
-class PatchModelMixin:
-    def partial_update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(
-            instance,
-            data=request.data,
-            partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        queryset = self.filter_queryset(self.get_queryset())
-        if queryset._prefetch_related_lookups:
-            instance._prefetched_objects_cache = {}
-            prefetch_related_objects(
-                [instance],
-                *queryset._prefetch_related_lookups
-            )
-        return Response(serializer.data)
-
-    def perform_update(self, serializer):
-        serializer.save()
 
 
 class RecipeViewSet(
@@ -97,8 +74,8 @@ class RecipeViewSet(
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
-            return CreateRecipeSerializer
-        return DisplayRecipeSerializer
+            return RecipeCreateSerializer
+        return RecipeDisplaySerializer
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -171,7 +148,7 @@ class RecipeViewSet(
             text='Рецепт не был добавлен в корзину'
         )
 
-    def create_shopping_list(self, shopping_list):
+    def _create_shopping_list(self, shopping_list):
         file_content = 'Список покупок:\n\n'
         for ingredient in shopping_list:
             file_content += (
@@ -197,7 +174,7 @@ class RecipeViewSet(
         ).order_by(
             'ingredient__name'
         )
-        file_content = self.create_shopping_list(shopping_list)
+        file_content = self._create_shopping_list(shopping_list)
         response = HttpResponse(file_content, content_type='text/plain')
         response['Content-Disposition'] = (
             'attachment; filename="shopping_list.txt"'

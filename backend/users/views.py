@@ -133,16 +133,6 @@ class UserViewSet(viewsets.ModelViewSet):
         pagination_class=PageNumberPagination
     )
     def subscriptions(self, request):
-        self.queryset = User.objects.filter(
-            following__user=request.user
-        ).prefetch_related('recipes')
-        # page = self.paginate_queryset(queryset)
-        # serializer = SubscriptionsSerializer(
-        #     page,
-        #     many=True,
-        #     context={'request': request}
-        # )
-        # return self.get_paginated_response(serializer.data)
         return self.list(request)
 
     @action(
