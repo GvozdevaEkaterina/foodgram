@@ -256,7 +256,7 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
             recipe=data['recipe']
         ).exists():
             raise serializers.ValidationError(
-                'Рецепт уже находится в корзине'
+                'Рецепт уже находится в корзине.'
             )
         return data
 
