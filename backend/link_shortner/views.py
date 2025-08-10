@@ -1,7 +1,6 @@
 """Приложение для сокращения ссылок."""
 
-from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect
 from django.urls import reverse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -26,7 +25,7 @@ def redirect_short_link(request, short_code):
         recipe_id = decode_url(short_code)
         Recipe.objects.get(id=recipe_id)
         return redirect(f'https://{request.get_host()}/recipes/{recipe_id}')
-    except (ValueError):
+    except ValueError:
         return redirect(f'https://{request.get_host()}/not_found')
     except Recipe.DoesNotExist:
         return redirect(f'https://{request.get_host()}/not_found')
