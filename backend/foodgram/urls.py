@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
 
 from link_shortner.views import get_short_link, redirect_short_link
@@ -16,6 +17,10 @@ router.register(r'recipes', RecipeViewSet, basename='recipe')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/docs/', TemplateView.as_view(
+        template_name='redoc.html',
+        extra_context={'schema_url': 'openapi-schema'}
+    ), name='redoc'),
     path('api/auth/', include('djoser.urls.authtoken')),
     path('api/', include(router.urls)),
     path(
