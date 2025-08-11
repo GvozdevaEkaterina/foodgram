@@ -84,19 +84,14 @@ jobs:
         source: "infra/docker-compose.production.yml"
         target: "foodgram/infra"
 
-    - name: Sync API Documentation
-      uses: appleboy/ssh-action@master
+    - name: Upload docs
+      uses: appleboy/scp-action@master
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        script: |
-          cd ~/foodgram
-          git fetch origin
-          git checkout origin/main -- docs/
-          chmod -R 755 docs/
-          docker exec foodgram-proxy nginx -s reload
+        source: "docs/"
+        target: "~/foodgram/docs/"
 
     - name: Executing remote ssh commands to deploy
       uses: appleboy/ssh-action@master
