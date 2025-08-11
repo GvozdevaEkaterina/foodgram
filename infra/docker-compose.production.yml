@@ -28,6 +28,7 @@ services:
       - type: bind
         source: ../backend/media
         target: /app/media
+      - ../backend/docs:/app/docs 
     depends_on:
       - db
     networks:
@@ -49,7 +50,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
-      - ../../docs:/usr/share/nginx/html/api/docs
+      - ../backend/docs:/usr/share/nginx/html/api/docs  
       - type: bind
         source: ../backend/media
         target: /app/media
