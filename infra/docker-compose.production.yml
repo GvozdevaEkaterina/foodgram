@@ -28,7 +28,9 @@ services:
       - type: bind
         source: ../backend/media
         target: /app/media
-      - ../backend/docs:/app/docs 
+      - type: bind
+        source: ../../docs
+        target: /app/docs
     depends_on:
       - db
     networks:
