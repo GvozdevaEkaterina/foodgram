@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as Admin
+from django.core.exceptions import ValidationError
 
 from .models import Subscriptions
 
@@ -29,7 +30,12 @@ class UserAdmin(Admin):
         'username',
         'email',
     )
-    inlines = (SubscriptionsInline, )
+    inlines = []
+
+    def get_inlines(self, request, obj=None):
+        if obj:
+            return [SubscriptionsInline]
+        return []
 
 
 class SubscriptionsAdmin(admin.ModelAdmin):

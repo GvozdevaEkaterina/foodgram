@@ -17,7 +17,7 @@ services:
 
   backend:
     ports:
-      - "1337:8000"
+      - '8000'
     container_name: foodgram-back
     image: katerishna/foodgram-backend
     env_file: ../.env
@@ -32,6 +32,8 @@ services:
       - db
     networks:
       - foodgram_network
+    expose:
+      - '8000'
 
   frontend:
     container_name: foodgram-front

@@ -25,7 +25,5 @@ def redirect_short_link(request, short_code):
         recipe_id = decode_url(short_code)
         Recipe.objects.get(id=recipe_id)
         return redirect(f'https://{request.get_host()}/recipes/{recipe_id}')
-    except ValueError:
-        return redirect(f'https://{request.get_host()}/not_found')
-    except Recipe.DoesNotExist:
+    except (ValueError, Recipe.DoesNotExist):
         return redirect(f'https://{request.get_host()}/not_found')
