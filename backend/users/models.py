@@ -53,6 +53,7 @@ class Subscriptions(models.Model):
             models.UniqueConstraint(
                 fields=['user', 'author'],
                 name='unique_user_author',
+                violation_error_message='Вы уже подписаны на этого автора.'
             ),
             models.CheckConstraint(
                 check=~models.Q(user_id=models.F('author_id')),
