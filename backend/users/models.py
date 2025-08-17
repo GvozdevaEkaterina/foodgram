@@ -45,11 +45,6 @@ class Subscriptions(models.Model):
         super().clean()
         if self.user == self.author:
             raise ValidationError('Нельзя подписаться на самого себя')
-        if Subscriptions.objects.filter(
-            user=self.user,
-            author=self.author
-        ).exists():
-            raise ValidationError('Вы уже подписаны на этого пользователя')
 
     class Meta:
         verbose_name = 'подписка'
@@ -57,10 +52,10 @@ class Subscriptions(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'author'],
-                name='unique_user_author'
+                name='unique_user_author',
             ),
             models.CheckConstraint(
                 check=~models.Q(user_id=models.F('author_id')),
-                name='check_self_follow'
+                name='check_self_follow',
             )
         ]
