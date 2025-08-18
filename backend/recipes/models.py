@@ -178,28 +178,12 @@ class FavoriteShoppingCart(models.Model):
 
 class Favorite(FavoriteShoppingCart):
 
-    def clean(self):
-        super().clean()
-        if Favorite.objects.filter(
-            user=self.user,
-            recipe=self.recipe
-        ).exists():
-            raise ValidationError('Этот рецепт уже находится в избранном')
-
     class Meta(FavoriteShoppingCart.Meta):
         verbose_name = 'избранное'
         verbose_name_plural = 'избранное'
 
 
 class ShoppingCart(FavoriteShoppingCart):
-
-    def clean(self):
-        super().clean()
-        if ShoppingCart.objects.filter(
-            user=self.user,
-            recipe=self.recipe
-        ).exists():
-            raise ValidationError('Этот рецепт уже находится в корзине')
 
     class Meta(FavoriteShoppingCart.Meta):
         verbose_name = 'корзина'
